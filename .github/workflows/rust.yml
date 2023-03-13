@@ -22,8 +22,8 @@ jobs:
       run: rustup target add wasm32-unknown-unknown
     - uses: Swatinem/rust-cache@v2
     - name: Build
-      run: trunk build --release
+      run: cd webapp;trunk build --release
     - name: Deploy
       uses: JamesIves/github-pages-deploy-action@v4
       with:
-        folder: dist
+        folder: webapp/dist
