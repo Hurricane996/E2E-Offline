@@ -1,0 +1,5 @@
+# E2E Offline
+
+This web app allows users to turn any messaging channel into a (probably) cryptographically secure end-to-end encryption service. I made this to prove a point; banning end-to-end encryption is effectively impossible because creating an end-to-end encryption algorithm is so easy. I'm not that smart and I did it in an afternoon.
+
+In terms of actual practical use, this is much worse than just using Signal, Telegram, WhatsApp, iMessage, or any of the myriad other apps with E2EE built in. In addition to being less convenient, it is also less secure. This doesn't implement the double ratcheting algorithm, which makes the single AES key a huge point of failure. Also I'm one hobbyist and the E2EE apps are made by dozens of people for whom this is their entire job. This means that existing solutions are more likely to be secure. My overall point is, this project exists solely to prove the aforementioned point.
