@@ -1,12 +1,12 @@
-use std::{ sync::Mutex};
+use std::sync::Mutex;
 
+use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{HtmlInputElement, HtmlTextAreaElement};
 use yew::prelude::*;
-use wasm_bindgen::{UnwrapThrowExt, JsCast};
 
 #[function_component(App)]
 fn app() -> Html {
-    let shared_key = use_state(||"".to_string());
+    let shared_key = use_state(|| "".to_string());
 
     html! {
         <div class="container">
@@ -15,7 +15,7 @@ fn app() -> Html {
                     <div class="card-body">
                         <Sender shared_key={shared_key.clone()} />
                     </div>
-                </div>          
+                </div>
                 <div class="card">
                     <div class="card-body">
                         <Receiver shared_key={shared_key.clone()} />
@@ -41,31 +41,39 @@ fn get_value_from_input_event(e: InputEvent) -> String {
 
 fn get_value_from_textarea_input_event(e: InputEvent) -> String {
     let event_target = e.dyn_into::<Event>().unwrap_throw().target().unwrap_throw();
-    let target: HtmlTextAreaElement = event_target.dyn_into::<HtmlTextAreaElement>().unwrap_throw();
+    let target: HtmlTextAreaElement = event_target
+        .dyn_into::<HtmlTextAreaElement>()
+        .unwrap_throw();
     target.value()
 }
 
 #[derive(Clone, PartialEq, Properties)]
 struct ReceiverProps {
-    shared_key: UseStateHandle<String>
+    shared_key: UseStateHandle<String>,
 }
 
 #[function_component(Receiver)]
 fn receiver(props: &ReceiverProps) -> Html {
     let ReceiverProps { shared_key } = props.clone();
 
-    let error_text = use_state(||"".to_string());
-    let receiver_pubkey_text = use_state(||"".to_string());
-    let sender_pubkey_text = use_state(||"".to_string());
-    let connection_string_text = use_state(||"".to_string());
+    let error_text = use_state(|| "".to_string());
+    let receiver_pubkey_text = use_state(|| "".to_string());
+    let sender_pubkey_text = use_state(|| "".to_string());
+    let connection_string_text = use_state(|| "".to_string());
 
-    let on_sender_pubkey_text_change = {let sender_pubkey_text = sender_pubkey_text.clone(); Callback::from(move |text| {
-        sender_pubkey_text.set(text);
-    })};
+    let on_sender_pubkey_text_change = {
+        let sender_pubkey_text = sender_pubkey_text.clone();
+        Callback::from(move |text| {
+            sender_pubkey_text.set(text);
+        })
+    };
 
-    let on_connection_string_text_change = {let connection_string_text = connection_string_text.clone(); Callback::from(move |text| {
-        connection_string_text.set(text);
-    })};
+    let on_connection_string_text_change = {
+        let connection_string_text = connection_string_text.clone();
+        Callback::from(move |text| {
+            connection_string_text.set(text);
+        })
+    };
 
     static BUILDER_MUTEX: Mutex<Option<e2eoffline::E2EOfflineBuilder>> = Mutex::new(None);
 
@@ -73,36 +81,46 @@ fn receiver(props: &ReceiverProps) -> Html {
         let receiver_pubkey_text = receiver_pubkey_text.clone();
         let error_text = error_text.clone();
 
-        Callback::from(move |_|{
+        Callback::from(move |_| {
             let mut builder = BUILDER_MUTEX.lock().unwrap();
             let reciever = e2eoffline::E2EOfflineBuilder::new_reciever();
             error_text.set("".to_string());
 
-            receiver_pubkey_text.set(reciever.get_pubkey_encoded().map_err(|e|error_text.set(e.to_string())).unwrap_throw());
+            receiver_pubkey_text.set(
+                reciever
+                    .get_pubkey_encoded()
+                    .map_err(|e| error_text.set(e.to_string()))
+                    .unwrap_throw(),
+            );
 
             builder.replace(reciever);
-
         })
     };
 
     let generate_shared_key = {
-        let sender_pubkey_text =sender_pubkey_text.clone();
+        let sender_pubkey_text = sender_pubkey_text.clone();
         let error_text = error_text.clone();
         let connection_string_text = connection_string_text.clone();
         let shared_key = shared_key.clone();
-        Callback::from(move |_|{
+        Callback::from(move |_| {
             let mut builder = BUILDER_MUTEX.lock().unwrap();
 
             match builder.as_mut() {
                 Some(builder) => {
                     error_text.set("".to_string());
 
-                    builder.set_other_public_key_encoded(&sender_pubkey_text).map_err(|_|error_text.set("Invalid sender public key".to_string())).unwrap_throw();
+                    builder
+                        .set_other_public_key_encoded(&sender_pubkey_text)
+                        .map_err(|_| error_text.set("Invalid sender public key".to_string()))
+                        .unwrap_throw();
 
-                    builder.recieve(&connection_string_text).map_err(|_|error_text.set("Invalid sender public key".to_string())).unwrap_throw();
+                    builder
+                        .recieve(&connection_string_text)
+                        .map_err(|_| error_text.set("Invalid sender public key".to_string()))
+                        .unwrap_throw();
 
                     shared_key.set(builder.get_shared_key().unwrap_throw());
-                },
+                }
                 None => {
                     error_text.set("Need to generate a receiver first".to_string());
                 }
@@ -110,8 +128,7 @@ fn receiver(props: &ReceiverProps) -> Html {
         })
     };
 
-
-    html!{
+    html! {
         <form onsubmit={Callback::from(|e: SubmitEvent| { e.prevent_default() })}>
             <h2>{ "Reciever" }</h2>
             <p class="error">{(*error_text).clone()}</p>
@@ -139,22 +156,23 @@ fn receiver(props: &ReceiverProps) -> Html {
 
 #[derive(Clone, PartialEq, Properties)]
 struct SenderProps {
-    shared_key: UseStateHandle<String>
+    shared_key: UseStateHandle<String>,
 }
 #[function_component(Sender)]
 
 fn sender(props: &SenderProps) -> Html {
     let SenderProps { shared_key } = props.clone();
-    let error_text = use_state(||"".to_string());
-    let sender_pubkey = use_state(||"".to_string());
-    let receiver_text = use_state(||"".to_string());
-    let connection_string_text = use_state(||"".to_string());
+    let error_text = use_state(|| "".to_string());
+    let sender_pubkey = use_state(|| "".to_string());
+    let receiver_text = use_state(|| "".to_string());
+    let connection_string_text = use_state(|| "".to_string());
 
-    let on_receiver_text_change = {let receiver_text = receiver_text.clone(); Callback::from(move |text| {
-        receiver_text.set(text);
-    })};
-
-
+    let on_receiver_text_change = {
+        let receiver_text = receiver_text.clone();
+        Callback::from(move |text| {
+            receiver_text.set(text);
+        })
+    };
 
     static BUILDER_MUTEX: Mutex<Option<e2eoffline::E2EOfflineBuilder>> = Mutex::new(None);
 
@@ -166,7 +184,12 @@ fn sender(props: &SenderProps) -> Html {
             let sender = e2eoffline::E2EOfflineBuilder::new_sender();
             error_text.set("".to_string());
 
-            sender_pubkey.set(sender.get_pubkey_encoded().map_err(|e|error_text.set(e.to_string())).unwrap_throw());
+            sender_pubkey.set(
+                sender
+                    .get_pubkey_encoded()
+                    .map_err(|e| error_text.set(e.to_string()))
+                    .unwrap_throw(),
+            );
 
             builder.replace(sender);
         })
@@ -177,30 +200,30 @@ fn sender(props: &SenderProps) -> Html {
         let error_text = error_text.clone();
         let connection_string_text = connection_string_text.clone();
         let shared_key = shared_key.clone();
-        Callback::from(move |_|{
+        Callback::from(move |_| {
             let mut builder = BUILDER_MUTEX.lock().unwrap();
-
 
             match builder.as_mut() {
                 Some(builder) => {
                     error_text.set("".to_string());
 
-                    builder.set_other_public_key_encoded(&receiver_text).map_err(|_|error_text.set("Invalid reciever public key".to_string())).unwrap_throw();
+                    builder
+                        .set_other_public_key_encoded(&receiver_text)
+                        .map_err(|_| error_text.set("Invalid reciever public key".to_string()))
+                        .unwrap_throw();
 
                     shared_key.set(builder.get_shared_key().unwrap_throw());
 
                     connection_string_text.set(builder.send().unwrap_throw());
-                },
+                }
                 None => {
                     error_text.set("Need to generate a sender first".to_string());
                 }
             }
         })
     };
- 
 
-
-    html!{
+    html! {
         <form onsubmit={Callback::from(|e: SubmitEvent| { e.prevent_default() })}>
         <h2>{ "Sender" }</h2>
         <p class="error">{(*error_text).clone()}</p>
@@ -228,31 +251,38 @@ fn sender(props: &SenderProps) -> Html {
 
 #[derive(Clone, PartialEq, Properties)]
 struct EncryptDecryptProps {
-    shared_key: UseStateHandle<String>
+    shared_key: UseStateHandle<String>,
 }
 #[function_component(EncryptDecrypt)]
 fn encrypt_decrypt(props: &EncryptDecryptProps) -> Html {
     let EncryptDecryptProps { shared_key } = props.clone();
-    // it's fine that this isn't a use_state because we don't need changes to it to trigger 
+    // it's fine that this isn't a use_state because we don't need changes to it to trigger
 
-    let plain_text = use_state(||"".to_string());
-    let cipher_text = use_state(||"".to_string());
+    let plain_text = use_state(|| "".to_string());
+    let cipher_text = use_state(|| "".to_string());
 
-    let error_text = use_state(||"".to_string());
+    let error_text = use_state(|| "".to_string());
 
-    let on_key_change = { let shared_key = shared_key.clone(); 
+    let on_key_change = {
+        let shared_key = shared_key.clone();
         Callback::from(move |text| {
             shared_key.set(text);
-        })}; 
+        })
+    };
 
+    let on_plain_text_change = {
+        let plain_text = plain_text.clone();
+        Callback::from(move |text| {
+            plain_text.set(text);
+        })
+    };
 
-    let on_plain_text_change = {let plain_text = plain_text.clone(); Callback::from(move |text| {
-        plain_text.set(text);
-    })};
-
-    let on_cipher_text_change = {let cipher_text = cipher_text.clone(); Callback::from(move |text| {
-        cipher_text.set(text);
-    })};
+    let on_cipher_text_change = {
+        let cipher_text = cipher_text.clone();
+        Callback::from(move |text| {
+            cipher_text.set(text);
+        })
+    };
 
     let encrypt = {
         let plain_text = plain_text.clone();
@@ -261,11 +291,14 @@ fn encrypt_decrypt(props: &EncryptDecryptProps) -> Html {
         let shared_key = shared_key.clone();
 
         Callback::from(move |_| {
-            let mut aes = e2eoffline::E2EOffline::from_key_base64(&shared_key).map_err(|_| error_text.set("Bad AES Key".to_string())).unwrap_throw();
+            let mut aes = e2eoffline::E2EOffline::from_key_base64(&shared_key)
+                .map_err(|_| error_text.set("Bad AES Key".to_string()))
+                .unwrap_throw();
 
             error_text.set("".to_string());
             cipher_text.set(aes.encrypt(&plain_text).unwrap_throw());
-        })};
+        })
+    };
 
     let decrypt = {
         let plain_text = plain_text.clone();
@@ -274,14 +307,18 @@ fn encrypt_decrypt(props: &EncryptDecryptProps) -> Html {
         let shared_key = shared_key.clone();
         Callback::from(move |_| {
             error_text.set("".to_string());
-            let mut aes = e2eoffline::E2EOffline::from_key_base64(&shared_key).map_err(|_| error_text.set("Bad AES Key".to_string())).unwrap_throw();
+            let mut aes = e2eoffline::E2EOffline::from_key_base64(&shared_key)
+                .map_err(|_| error_text.set("Bad AES Key".to_string()))
+                .unwrap_throw();
 
-            let text = aes.decrypt(&cipher_text).map_err(|_| error_text.set("Bad Ciphertext".to_string())).unwrap_throw();
+            let text = aes
+                .decrypt(&cipher_text)
+                .map_err(|_| error_text.set("Bad Ciphertext".to_string()))
+                .unwrap_throw();
 
             plain_text.set(text)
         })
     };
-
 
     html! {
         <form onsubmit={Callback::from(|e: SubmitEvent| { e.prevent_default() })}>
@@ -309,10 +346,9 @@ fn main() {
     yew::Renderer::<App>::new().render();
 }
 
-
 #[derive(Clone, PartialEq, Properties)]
 pub struct TextInputProps {
-    pub value: Option<String>, 
+    pub value: Option<String>,
     pub on_change: Callback<String>,
     pub class: Option<String>,
     pub id: Option<String>,
@@ -320,7 +356,12 @@ pub struct TextInputProps {
 
 #[function_component(TextInput)]
 pub fn text_input(props: &TextInputProps) -> Html {
-    let TextInputProps { on_change, id, class, value } = props.clone();
+    let TextInputProps {
+        on_change,
+        id,
+        class,
+        value,
+    } = props.clone();
 
     let oninput = Callback::from(move |input_event: InputEvent| {
         on_change.emit(get_value_from_input_event(input_event));
@@ -331,10 +372,9 @@ pub fn text_input(props: &TextInputProps) -> Html {
     }
 }
 
-
 #[derive(Clone, PartialEq, Properties)]
 pub struct TextAreaInputProps {
-    pub value: Option<String>, 
+    pub value: Option<String>,
     pub on_change: Callback<String>,
     pub class: Option<String>,
     pub id: Option<String>,
@@ -342,7 +382,12 @@ pub struct TextAreaInputProps {
 
 #[function_component(TextAreaInput)]
 pub fn text_input(props: &TextAreaInputProps) -> Html {
-    let TextAreaInputProps { on_change, id, class, value } = props.clone();
+    let TextAreaInputProps {
+        on_change,
+        id,
+        class,
+        value,
+    } = props.clone();
 
     let oninput = Callback::from(move |input_event: InputEvent| {
         on_change.emit(get_value_from_textarea_input_event(input_event));

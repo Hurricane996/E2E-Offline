@@ -1,6 +1,6 @@
 use std::io::stdin;
 
-use e2eoffline::{E2EOfflineBuilder, E2EOffline};
+use e2eoffline::{E2EOffline, E2EOfflineBuilder};
 
 macro_rules! readline {
     ($buffer:ident) => {
@@ -11,7 +11,7 @@ macro_rules! readline {
 
 fn main() -> anyhow::Result<()> {
     let mut buffer = String::new();
-    
+
     let mut e2e = loop {
         println!("s to send, r to recieve, k to use an existing key");
 
@@ -23,15 +23,12 @@ fn main() -> anyhow::Result<()> {
                 println!("Shared Key?");
                 readline!(buffer);
 
-                break E2EOffline::from_key_base64(&buffer)
+                break E2EOffline::from_key_base64(&buffer);
             }
             "r" => {
                 println!("Recieving!");
                 let mut reciever = E2EOfflineBuilder::new_reciever();
-                println!(
-                    "Your public key is {}",
-                    reciever.get_pubkey_encoded()?,
-                );
+                println!("Your public key is {}", reciever.get_pubkey_encoded()?,);
                 println!("Sender public key? (preferably exchanged with them in person)");
                 readline!(buffer);
 
@@ -43,7 +40,10 @@ fn main() -> anyhow::Result<()> {
 
                 reciever.recieve(&buffer)?;
 
-                println!("Your key is {}, do not send it to anyone", reciever.get_shared_key()?);
+                println!(
+                    "Your key is {}, do not send it to anyone",
+                    reciever.get_shared_key()?
+                );
 
                 break reciever.build();
             }
@@ -57,13 +57,13 @@ fn main() -> anyhow::Result<()> {
 
                 sender.set_other_public_key_encoded(&buffer)?;
 
-
-
                 let token = sender.send()?;
 
                 println!("Your key exchange text is {token}. Send it to the other user");
-                println!("Your key is {}, do not send it to anyone", sender.get_shared_key()?);
-
+                println!(
+                    "Your key is {}, do not send it to anyone",
+                    sender.get_shared_key()?
+                );
 
                 break sender.build();
             }
@@ -81,14 +81,14 @@ fn main() -> anyhow::Result<()> {
                 println!("Plaintext?");
 
                 readline!(buffer);
-                println!("{}",e2e.encrypt(&buffer)?);
+                println!("{}", e2e.encrypt(&buffer)?);
             }
 
             "d" => {
                 println!("Ciphertext?");
 
                 readline!(buffer);
-                println!("{}",e2e.decrypt(&buffer)?);
+                println!("{}", e2e.decrypt(&buffer)?);
             }
 
             "q" => break,
