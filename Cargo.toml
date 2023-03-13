@@ -14,6 +14,7 @@ once_cell = "1.17.1"
 rand = "0.8.5"
 rsa = {version="0.8.2", features=["sha2"]}
 thiserror = "=1.0.38"
-wasm-bindgen = "0.2.84"
-web-sys = "0.3.61"
-yew = { version = "0.20.0", features = ["csr"] }
+
+
+[workspace]
+members = ["webapp"]
