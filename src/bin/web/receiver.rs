@@ -1,4 +1,3 @@
-use std::sync::Mutex;
 
 use wasm_bindgen::UnwrapThrowExt;
 use web_sys::SubmitEvent;
@@ -20,6 +19,8 @@ pub fn receiver(props: &ReceiverProps) -> Html {
     let sender_pubkey_text = use_state(|| "".to_string());
     let connection_string_text = use_state(|| "".to_string());
 
+    let builder = use_mut_ref(||None);
+
     let on_sender_pubkey_text_change = {
         let sender_pubkey_text = sender_pubkey_text.clone();
         Callback::from(move |text| {
@@ -34,14 +35,13 @@ pub fn receiver(props: &ReceiverProps) -> Html {
         })
     };
 
-    static BUILDER_MUTEX: Mutex<Option<e2eoffline::E2EOfflineBuilder>> = Mutex::new(None);
 
     let generate_reciever = {
         let receiver_pubkey_text = receiver_pubkey_text.clone();
         let error_text = error_text.clone();
+        let builder = builder.clone();
 
         Callback::from(move |_| {
-            let mut builder = BUILDER_MUTEX.lock().unwrap();
             let reciever = e2eoffline::E2EOfflineBuilder::new_reciever();
             error_text.set("".to_string());
 
@@ -52,7 +52,7 @@ pub fn receiver(props: &ReceiverProps) -> Html {
                     .unwrap_throw(),
             );
 
-            builder.replace(reciever);
+            builder.replace(Some(reciever));
         })
     };
 
@@ -62,9 +62,7 @@ pub fn receiver(props: &ReceiverProps) -> Html {
         let connection_string_text = connection_string_text.clone();
         let shared_key = shared_key.clone();
         Callback::from(move |_| {
-            let mut builder = BUILDER_MUTEX.lock().unwrap();
-
-            match builder.as_mut() {
+            match (*builder).borrow_mut().as_mut() {
                 Some(builder) => {
                     error_text.set("".to_string());
 
