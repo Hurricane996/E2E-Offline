@@ -1,8 +1,6 @@
-
-use wasm_bindgen::UnwrapThrowExt;
 use yew::prelude::*;
 
-use crate::text_input::TextInput;
+use crate::{print_error_if_happened, text_input::TextInput};
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct SenderProps {
@@ -16,8 +14,8 @@ pub fn sender(props: &SenderProps) -> Html {
     let sender_pubkey = use_state(|| "".to_string());
     let receiver_text = use_state(|| "".to_string());
     let connection_string_text = use_state(|| "".to_string());
-
-    let builder = use_mut_ref(||None);
+    let is_doing_work = use_state(|| false);
+    let builder = use_mut_ref(|| None);
 
     let on_receiver_text_change = {
         let receiver_text = receiver_text.clone();
@@ -26,24 +24,29 @@ pub fn sender(props: &SenderProps) -> Html {
         })
     };
 
-
     let create_sender = {
         let sender_pubkey = sender_pubkey.clone();
         let error_text = error_text.clone();
         let builder = builder.clone();
+        let is_doing_work = is_doing_work.clone();
 
         Callback::from(move |_| {
-            let sender = e2eoffline::E2EOfflineBuilder::new_sender();
-            error_text.set("".to_string());
+            is_doing_work.set(true);
+            let r = (|| -> anyhow::Result<()> {
+                let sender = e2eoffline::E2EOfflineBuilder::new_sender();
+                error_text.set("".to_string());
 
-            sender_pubkey.set(
-                sender
-                    .get_pubkey_encoded()
-                    .map_err(|e| error_text.set(e.to_string()))
-                    .unwrap_throw(),
-            );
+                sender_pubkey.set(sender.get_pubkey_encoded().map_err(|e| {
+                    error_text.set(e.to_string());
+                    e
+                })?);
 
-            builder.replace(Some(sender));
+                builder.replace(Some(sender));
+
+                Ok(())
+            })();
+            is_doing_work.set(false);
+            print_error_if_happened(r);
         })
     };
 
@@ -52,24 +55,34 @@ pub fn sender(props: &SenderProps) -> Html {
         let error_text = error_text.clone();
         let connection_string_text = connection_string_text.clone();
         let shared_key = shared_key.clone();
+
         Callback::from(move |_| {
-            match (*builder).borrow_mut().as_mut() {
-                Some(builder) => {
-                    error_text.set("".to_string());
+            is_doing_work.set(true);
+            let r = (|| -> anyhow::Result<()> {
+                match (*builder).borrow_mut().as_mut() {
+                    Some(builder) => {
+                        error_text.set("".to_string());
 
-                    builder
-                        .set_other_public_key_encoded(&receiver_text)
-                        .map_err(|_| error_text.set("Invalid reciever public key".to_string()))
-                        .unwrap_throw();
+                        builder
+                            .set_other_public_key_encoded(&receiver_text)
+                            .map_err(|e| {
+                                error_text.set("Invalid reciever public key".to_string());
+                                e
+                            })?;
 
-                    shared_key.set(builder.get_shared_key().unwrap_throw());
+                        shared_key.set(builder.get_shared_key()?);
 
-                    connection_string_text.set(builder.send().unwrap_throw());
+                        connection_string_text.set(builder.send()?);
+                    }
+                    None => {
+                        error_text.set("Need to generate a sender first".to_string());
+                    }
                 }
-                None => {
-                    error_text.set("Need to generate a sender first".to_string());
-                }
-            }
+                Ok(())
+            })();
+
+            is_doing_work.set(false);
+            print_error_if_happened(r);
         })
     };
 

@@ -1,3 +1,5 @@
+use wasm_bindgen::JsValue;
+use web_sys::console;
 use yew::prelude::*;
 
 mod encrypt_decrypt;
@@ -9,6 +11,13 @@ mod text_input;
 use encrypt_decrypt::EncryptDecrypt;
 use receiver::Receiver;
 use sender::Sender;
+
+fn print_error_if_happened<T>(result: anyhow::Result<T>) {
+    if let Err(e) = result {
+        #[allow(unused_unsafe)]
+        unsafe { console::error_1(&JsValue::from_str(&e.to_string())) };
+    }
+}
 
 #[function_component(App)]
 fn app() -> Html {
