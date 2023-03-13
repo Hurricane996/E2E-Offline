@@ -17,4 +17,4 @@ thiserror = "=1.0.38"
 
 
 [workspace]
-members = ["webapp"]
+members = ["webapp", "cmdline"]
